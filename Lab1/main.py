@@ -1,5 +1,8 @@
 # Variant: 306 (min(Y-Yэт)²)
+import timeit
 from random import randint
+
+start = timeit.default_timer()
 
 a0, a1, a2, a3 = 3, 1, 13, 4
 X1, X2, X3 = [], [], []
@@ -43,6 +46,9 @@ Yet = a0 + a1 * X01 + a2 * X02 + a3 * X03
 f = [(Y[i] - Yet) ** 2 for i in range(8)]
 res = min(f)
 
+stop = timeit.default_timer()
+time = (stop - start)
 print("Yэт: " + str(Yet))
 print("(Y-Yэт)²: " + str(f))
 print("min(Y-Yэт)²: " + str(res))
+print(f"Час роботи програми = {round(time, 10)} sec")
