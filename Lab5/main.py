@@ -5,7 +5,6 @@ from pyDOE2 import *
 from scipy.stats import f, t
 from functools import partial
 
-
 # variant 306
 x_range = ((-1, 2), (-9, 5), (-10, 7))
 avg_x_min = sum([x[0] for x in x_range]) / 3
@@ -160,6 +159,7 @@ def fisher_test(y, y_aver, y_new, n, m, d):
 
 
 def check(X, Y, B, n, m):
+    global amount_of_coef
     print('\nПеревірка рівняння:')
     f1 = m - 1
     f2 = n
@@ -180,7 +180,7 @@ def check(X, Y, B, n, m):
     Gp = cochran_test(Y, y_average, n, m)
     print(f'Gp = {Gp}')
     if Gp < G_kr:
-        print(f'З ймовірністю {1-q} дисперсії однорідні.')
+        print(f'З ймовірністю {1 - q} дисперсії однорідні.')
     else:
         print("Необхідно збільшити кількість дослідів")
         m += 1
@@ -192,6 +192,7 @@ def check(X, Y, B, n, m):
     final_k = [B[i] for i in range(len(ts)) if ts[i] in res]
     print('\nКоефіцієнти {} статистично незначущі, тому ми виключаємо їх з рівняння.'.format(
         [round(i, 3) for i in B if i not in final_k]))
+    amount_of_coef += len([round(i, 3) for i in B if i not in final_k])
 
     y_new = []
     for j in range(n):
@@ -217,13 +218,16 @@ def check(X, Y, B, n, m):
         print('Математична модель адекватна експериментальним даним')
     else:
         print('Математична модель не адекватна експериментальним даним')
-
+    print(amount_of_coef/100)
 
 def main(n, m):
-    x5, y5, x5_norm = plan_matrix5(n, m)
-    y5_average = [round(sum(i) / len(i), 3) for i in y5]
-    b5 = find_coefficients(x5, y5_average)
-    check(x5_norm, y5, b5, n, m)
+    global amount_of_coef
+    amount_of_coef = 0
+    for i in range(100):
+        x5, y5, x5_norm = plan_matrix5(n, m)
+        y5_average = [round(sum(i) / len(i), 3) for i in y5]
+        b5 = find_coefficients(x5, y5_average)
+        check(x5_norm, y5, b5, n, m)
 
 
 if __name__ == '__main__':
