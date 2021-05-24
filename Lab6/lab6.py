@@ -1,238 +1,212 @@
-from math import fabs, sqrt
+from math import fabs
+from random import randrange
+import numpy as np
+from numpy.linalg import solve
+from scipy.stats import f, t
+from prettytable import PrettyTable
 # Варіант 306
-m = 5
-p = 0.84
-N = 15
 
-x1_min = 10
-x1_max = 40
-x2_min = 15
-x2_max = 50
-x3_min = 10
-x3_max = 30
+m = 3
+n = 15
 
-x01 = (x1_max + x1_min) / 2
-x02 = (x2_max + x2_min) / 2
-x03 = (x3_max + x3_min) / 2
-delta_x1 = x1_max - x01
-delta_x2 = x2_max - x02
-delta_x3 = x3_max - x03
+x1min = -10
+x1max = 50
+x2min = 20
+x2max = 60
+x3min = -10
+x3max = 10
+
+x01 = (x1max + x1min) / 2
+x02 = (x2max + x2min) / 2
+x03 = (x3max + x3min) / 2
+deltax1 = x1max - x01
+deltax2 = x2max - x02
+deltax3 = x3max - x03
+
+xn = [[-1, -1, -1, +1, +1, +1, -1, +1, +1, +1],
+      [-1, -1, +1, +1, -1, -1, +1, +1, +1, +1],
+      [-1, +1, -1, -1, +1, -1, +1, +1, +1, +1],
+      [-1, +1, +1, -1, -1, +1, -1, +1, +1, +1],
+      [+1, -1, -1, -1, -1, +1, +1, +1, +1, +1],
+      [+1, -1, +1, -1, +1, -1, -1, +1, +1, +1],
+      [+1, +1, -1, +1, -1, -1, -1, +1, +1, +1],
+      [+1, +1, +1, +1, +1, +1, +1, +1, +1, +1],
+      [-1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0, 0],
+      [+1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0, 0],
+      [0, -1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0],
+      [0, +1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0],
+      [0, 0, -1.73, 0, 0, 0, 0, 0, 0, 2.9929],
+      [0, 0, +1.73, 0, 0, 0, 0, 0, 0, 2.9929],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+x1 = [x1min, x1min, x1min, x1min, x1max, x1max, x1max, x1max, -1.73 * deltax1 + x01, 1.73 * deltax1 + x01, x01, x01,
+      x01, x01, x01]
+x2 = [x2min, x2min, x2max, x2max, x2min, x2min, x2max, x2max, x02, x02, -1.73 * deltax2 + x02, 1.73 * deltax2 + x02,
+      x02, x02, x02]
+x3 = [x3min, x3max, x3min, x3max, x3min, x3max, x3min, x3max, x03, x03, x03, x03, -1.73 * deltax3 + x03,
+      1.73 * deltax3 + x03, x03]
+x1x2 = [0] * 15
+x1x3 = [0] * 15
+x2x3 = [0] * 15
+x1x2x3 = [0] * 15
+x1kv = [0] * 15
+x2kv = [0] * 15
+x3kv = [0] * 15
+for i in range(15):
+    x1x2[i] = x1[i] * x2[i]
+    x1x3[i] = x1[i] * x3[i]
+    x2x3[i] = x2[i] * x3[i]
+    x1x2x3[i] = x1[i] * x2[i] * x3[i]
+    x1kv[i] = x1[i] ** 2
+    x2kv[i] = x2[i] ** 2
+    x3kv[i] = x3[i] ** 2
+
+list_for_a = list(zip(x1, x2, x3, x1x2, x1x3, x2x3, x1x2x3, x1kv, x2kv, x3kv))
+
+for i in range(len(list_for_a)):
+    list_for_a[i] = list(list_for_a[i])
+    for j in range(len(list_for_a[i])):
+        list_for_a[i][j] = round(list_for_a[i][j], 3)
 
 
-class Exp:
-    def getСohranValue(self, qty_of_selections, significance):
-        from _pydecimal import Decimal
-        from scipy.stats import f
-        self += 1
-        partResult1 = significance / (self - 1)
-        params = [partResult1, qty_of_selections, (self - 1 - 1) * qty_of_selections]
-        fisher = f.isf(*params)
-        result = fisher / (fisher + (self - 1 - 1))
-        return Decimal(result).quantize(Decimal('.0001')).__float__()
-
-    def get_student_value(self, significance):
-        from _pydecimal import Decimal
-        from scipy.stats import t
-        return Decimal(abs(t.ppf(significance / 2, self))).quantize(Decimal('.0001')).__float__()
-
-    def get_fisher_value(self, f4, significance):
-        from _pydecimal import Decimal
-        from scipy.stats import f
-        return Decimal(abs(f.isf(significance, f4, self))).quantize(Decimal('.0001')).__float__()
+planning_matrix_x = PrettyTable()
+planning_matrix_x.field_names = ['X1', 'X2', 'X3', 'X1X2', 'X1X3', 'X2X3', 'X1X2X3', 'X1X1', 'X2X2', 'X3X3']
+print("Матриця планування з натуралізованими коефіцієнтами X:")
+planning_matrix_x.add_rows(list_for_a)
+print(planning_matrix_x)
 
 
-def generate_matrix():
-    def f(X1, X2, X3):
-        from random import randrange
-        y = 1.7 + 4.9 * X1 + 2.5 * X2 + 3.4 * X3 + 6.3 * X1 * X1 + 1 * X2 * X2 + 1.2 * X3 * X3 + 4.8 * X1 * X2 + \
-            0.1 * X1 * X3 + 2 * X2 * X3 + 0.5 * X1 * X2 * X3 + randrange(0, 10) - 5
-        return y
 
-    matrix_with_y = [[f(matrix_x[j][0], matrix_x[j][1], matrix_x[j][2]) for i in range(m)] for j in range(N)]
-    return matrix_with_y
+def function(X1, X2, X3):
+    y = 2.4 + 4.8 * X1 + 2.5 * X2 + 8.5 * X3 + 9.3 * X1 * X1 + 0.2 * X2 * X2 + 4.5 * X3 * X3 + 9.0 * X1 * X2 + \
+        0.4 * X1 * X3 + 5.4 * X2 * X3 + 5.2 * X1 * X2 * X3 + randrange(0, 10) - 5
+    return y
 
 
-def x(l1, l2, l3):
-    x_1 = l1 * delta_x1 + x01
-    x_2 = l2 * delta_x2 + x02
-    x_3 = l3 * delta_x3 + x03
-    return [x_1, x_2, x_3]
+Y = [[function(list_for_a[j][0], list_for_a[j][1], list_for_a[j][2]) for i in range(m)] for j in range(15)]
+
+planing_matrix_y = PrettyTable()
+planing_matrix_y.field_names = ['Y1', 'Y2', 'Y3']
+print("Матриця планування Y:")
+planing_matrix_y.add_rows(Y)
+print(planing_matrix_y)
+
+Y_average = []
+for i in range(len(Y)):
+    Y_average.append(np.mean(Y[i], axis=0))
+print("Середні значення відгуку за рядками:")
+for i in range(15):
+    print("{:.3f}".format(Y_average[i]), end=" ")
+
+dispersions = []
+for i in range(len(Y)):
+    a = 0
+    for k in Y[i]:
+        a += (k - np.mean(Y[i], axis=0)) ** 2
+    dispersions.append(a / len(Y[i]))
 
 
-def get_average(lst, orientation):
-    average = []
-    if orientation == 1:
-        for rows in range(len(lst)):
-            average.append(sum(lst[rows]) / len(lst[rows]))
-    else:
-        for column in range(len(lst[0])):
-            number_lst = []
-            for rows in range(len(lst)):
-                number_lst.append(lst[rows][column])
-            average.append(sum(number_lst) / len(number_lst))
-    return average
+def find_known(num):
+    a = 0
+    for j in range(15):
+        a += Y_average[j] * list_for_a[j][num - 1] / 15
+    return a
 
 
 def a(first, second):
-    need_a = 0
-    for j in range(N):
-        need_a += matrix_x[j][first - 1] * matrix_x[j][second - 1] / N
-    return need_a
+    a = 0
+    for j in range(15):
+        a += list_for_a[j][first - 1] * list_for_a[j][second - 1] / 15
+    return a
 
 
-def find_known(number):
-    need_a = 0
-    for j in range(N):
-        need_a += average_y[j] * matrix_x[j][number - 1] / 15
-    return need_a
+my = sum(Y_average) / 15
+mx = []
+for i in range(10):
+    number_lst = []
+    for j in range(15):
+        number_lst.append(list_for_a[j][i])
+    mx.append(sum(number_lst) / len(number_lst))
 
+det1 = [
+    [1, mx[0], mx[1], mx[2], mx[3], mx[4], mx[5], mx[6], mx[7], mx[8], mx[9]],
+    [mx[0], a(1, 1), a(1, 2), a(1, 3), a(1, 4), a(1, 5), a(1, 6), a(1, 7), a(1, 8), a(1, 9), a(1, 10)],
+    [mx[1], a(2, 1), a(2, 2), a(2, 3), a(2, 4), a(2, 5), a(2, 6), a(2, 7), a(2, 8), a(2, 9), a(2, 10)],
+    [mx[2], a(3, 1), a(3, 2), a(3, 3), a(3, 4), a(3, 5), a(3, 6), a(3, 7), a(3, 8), a(3, 9), a(3, 10)],
+    [mx[3], a(4, 1), a(4, 2), a(4, 3), a(4, 4), a(4, 5), a(4, 6), a(4, 7), a(4, 8), a(4, 9), a(4, 10)],
+    [mx[4], a(5, 1), a(5, 2), a(5, 3), a(5, 4), a(5, 5), a(5, 6), a(5, 7), a(5, 8), a(5, 9), a(5, 10)],
+    [mx[5], a(6, 1), a(6, 2), a(6, 3), a(6, 4), a(6, 5), a(6, 6), a(6, 7), a(6, 8), a(6, 9), a(6, 10)],
+    [mx[6], a(7, 1), a(7, 2), a(7, 3), a(7, 4), a(7, 5), a(7, 6), a(7, 7), a(7, 8), a(7, 9), a(7, 10)],
+    [mx[7], a(8, 1), a(8, 2), a(8, 3), a(8, 4), a(8, 5), a(8, 6), a(8, 7), a(8, 8), a(8, 9), a(8, 10)],
+    [mx[8], a(9, 1), a(9, 2), a(9, 3), a(9, 4), a(9, 5), a(9, 6), a(9, 7), a(9, 8), a(9, 9), a(9, 10)],
+    [mx[9], a(10, 1), a(10, 2), a(10, 3), a(10, 4), a(10, 5), a(10, 6), a(10, 7), a(10, 8), a(10, 9), a(10, 10)]]
 
-def solve(lst_1, lst_2):
-    from numpy.linalg import solve
-    solver = solve(lst_1, lst_2)
-    return solver
+det2 = [my, find_known(1), find_known(2), find_known(3), find_known(4), find_known(5), find_known(6), find_known(7),
+        find_known(8), find_known(9), find_known(10)]
 
-
-def check_result(b_lst, k):
-    y_i = b_lst[0] + b_lst[1] * matrix[k][0] + b_lst[2] * matrix[k][1] + b_lst[3] * matrix[k][2] + \
-          b_lst[4] * matrix[k][3] + b_lst[5] * matrix[k][4] + b_lst[6] * matrix[k][5] + b_lst[7] * matrix[k][6] + \
-          b_lst[8] * matrix[k][7] + b_lst[9] * matrix[k][8] + b_lst[10] * matrix[k][9]
-    return y_i
-
-
-def student_test(b_lst, number_x=10):
-    dispersion_b = sqrt(dispersion_b2)
-    for column in range(number_x + 1):
-        t_practice = 0
-        t_theoretical = Exp.get_student_value(f3, q)
-        for row in range(N):
-            if column == 0:
-                t_practice += average_y[row] / N
-            else:
-                t_practice += average_y[row] * matrix_pfe[row][column - 1]
-        if fabs(t_practice / dispersion_b) < t_theoretical:
-            b_lst[column] = 0
-    return b_lst
-
-
-def fisher_test():
-    dispersion_ad = 0
-    f4 = N - d
-    for row in range(len(average_y)):
-        dispersion_ad += (m * (average_y[row] - check_result(student_lst, row))) / (N - d)
-    F_practice = dispersion_ad / dispersion_b2
-    F_theoretical = Exp.get_fisher_value(f3, f4, q)
-    return F_practice < F_theoretical
-
-
-matrix_pfe = [
-    [-1, -1, -1, +1, +1, +1, -1, +1, +1, +1],
-    [-1, -1, +1, +1, -1, -1, +1, +1, +1, +1],
-    [-1, +1, -1, -1, +1, -1, +1, +1, +1, +1],
-    [-1, +1, +1, -1, -1, +1, -1, +1, +1, +1],
-    [+1, -1, -1, -1, -1, +1, +1, +1, +1, +1],
-    [+1, -1, +1, -1, +1, -1, -1, +1, +1, +1],
-    [+1, +1, -1, +1, -1, -1, -1, +1, +1, +1],
-    [+1, +1, +1, +1, +1, +1, +1, +1, +1, +1],
-    [-1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0, 0],
-    [+1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0, 0],
-    [0, -1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0],
-    [0, +1.73, 0, 0, 0, 0, 0, 0, 2.9929, 0],
-    [0, 0, -1.73, 0, 0, 0, 0, 0, 0, 2.9929],
-    [0, 0, +1.73, 0, 0, 0, 0, 0, 0, 2.9929],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-]
-
-matrix_x = [[] for x in range(N)]
-for i in range(len(matrix_x)):
-    if i < 8:
-        x_1 = x1_min if matrix_pfe[i][0] == -1 else x1_max
-        x_2 = x2_min if matrix_pfe[i][1] == -1 else x2_max
-        x_3 = x3_min if matrix_pfe[i][2] == -1 else x3_max
-    else:
-        x_lst = x(matrix_pfe[i][0], matrix_pfe[i][1], matrix_pfe[i][2])
-        x_1, x_2, x_3 = x_lst
-    matrix_x[i] = [x_1, x_2, x_3, x_1 * x_2, x_1 * x_3, x_2 * x_3, x_1 * x_2 * x_3, x_1 ** 2, x_2 ** 2, x_3 ** 2]
-
-adequate = False
-homogeneous = False
-while not adequate:
-    matrix_y = generate_matrix()
-    average_x = get_average(matrix_x, 0)
-    average_y = get_average(matrix_y, 1)
-    matrix = [(matrix_x[i] + matrix_y[i]) for i in range(N)]
-    mx_i = average_x
-    my = sum(average_y) / 15
-
-    unknown = [
-        [1, mx_i[0], mx_i[1], mx_i[2], mx_i[3], mx_i[4], mx_i[5], mx_i[6], mx_i[7], mx_i[8], mx_i[9]],
-        [mx_i[0], a(1, 1), a(1, 2), a(1, 3), a(1, 4), a(1, 5), a(1, 6), a(1, 7), a(1, 8), a(1, 9), a(1, 10)],
-        [mx_i[1], a(2, 1), a(2, 2), a(2, 3), a(2, 4), a(2, 5), a(2, 6), a(2, 7), a(2, 8), a(2, 9), a(2, 10)],
-        [mx_i[2], a(3, 1), a(3, 2), a(3, 3), a(3, 4), a(3, 5), a(3, 6), a(3, 7), a(3, 8), a(3, 9), a(3, 10)],
-        [mx_i[3], a(4, 1), a(4, 2), a(4, 3), a(4, 4), a(4, 5), a(4, 6), a(4, 7), a(4, 8), a(4, 9), a(4, 10)],
-        [mx_i[4], a(5, 1), a(5, 2), a(5, 3), a(5, 4), a(5, 5), a(5, 6), a(5, 7), a(5, 8), a(5, 9), a(5, 10)],
-        [mx_i[5], a(6, 1), a(6, 2), a(6, 3), a(6, 4), a(6, 5), a(6, 6), a(6, 7), a(6, 8), a(6, 9), a(6, 10)],
-        [mx_i[6], a(7, 1), a(7, 2), a(7, 3), a(7, 4), a(7, 5), a(7, 6), a(7, 7), a(7, 8), a(7, 9), a(7, 10)],
-        [mx_i[7], a(8, 1), a(8, 2), a(8, 3), a(8, 4), a(8, 5), a(8, 6), a(8, 7), a(8, 8), a(8, 9), a(8, 10)],
-        [mx_i[8], a(9, 1), a(9, 2), a(9, 3), a(9, 4), a(9, 5), a(9, 6), a(9, 7), a(9, 8), a(9, 9), a(9, 10)],
-        [mx_i[9], a(10, 1), a(10, 2), a(10, 3), a(10, 4), a(10, 5), a(10, 6), a(10, 7), a(10, 8), a(10, 9), a(10, 10)]
-    ]
-    known = [my, find_known(1), find_known(2), find_known(3), find_known(4), find_known(5), find_known(6),
-             find_known(7),
-             find_known(8), find_known(9), find_known(10)]
-
-    beta = solve(unknown, known)
-    print("Рівняння регресії:")
-    print("{:.3f} + {:.3f} * X1 + {:.3f} * X2 + {:.3f} * X3 + {:.3f} * Х1X2 + {:.3f} * Х1X3 + {:.3f} * Х2X3"
-          "+ {:.3f} * Х1Х2X3 + {:.3f} * X11^2 + {:.3f} * X22^2 + {:.3f} * X33^2 = ŷ\n\tПеревірка"
+beta = solve(det1, det2)
+print("\nОтримане рівняння регресії:")
+print("{:.3f} + {:.3f} * X1 + {:.3f} * X2 + {:.3f} * X3 + {:.3f} * Х1X2 + {:.3f} * Х1X3 + {:.3f} * Х2X3"
+          "+ {:.3f} * Х1Х2X3 + {:.3f} * X11^2 + {:.3f} * X22^2 + {:.3f} * X33^2 = ŷ"
           .format(beta[0], beta[1], beta[2], beta[3], beta[4], beta[5], beta[6], beta[7], beta[8], beta[9], beta[10]))
-    for i in range(N):
-        print("ŷ{} = {:.3f} ≈ {:.3f}".format((i + 1), check_result(beta, i), average_y[i]))
+y_i = [0] * 15
+print("Експериментальні значення:")
+for k in range(15):
+    y_i[k] = beta[0] + beta[1] * list_for_a[k][0] + beta[2] * list_for_a[k][1] + beta[3] * list_for_a[k][2] + \
+             beta[4] * list_for_a[k][3] + beta[5] * list_for_a[k][4] + beta[6] * list_for_a[k][5] + beta[7] * \
+             list_for_a[k][6] + beta[8] * list_for_a[k][7] + beta[9] * list_for_a[k][8] + beta[10] * list_for_a[k][9]
+for i in range(15):
+    print("{:.3f}".format(y_i[i]), end=" ")
+print("\n------------------------------- Перевірка за критерієм Кохрена -------------------------------")
+Gp = max(dispersions) / sum(dispersions)
+Gt = 0.3346
+print("Gp =", Gp)
+if Gp < Gt:
+    print("Дисперсія однорідна")
+else:
+    print("Дисперсія неоднорідна")
 
-    while not homogeneous:
-        print("Матриця планування експерименту:")
-        print("      X1           X2           X3          X1X2        X1X3         X2X3         X1X2X3       X1X1"
-              "         X2X2         X3X3          Yi ->")
-        for row in range(N):
-            print(end=' ')
-            for column in range(len(matrix[0])):
-                print("{:^12.3f}".format(matrix[row][column]), end=' ')
-            print("")
+print("------------------ Перевірка значущості коефіцієнтів за критерієм Стьюдента ------------------")
+sb = sum(dispersions) / len(dispersions)
+sbs = (sb / (15 * m)) ** 0.5
 
-        dispersion_y = [0.0 for x in range(N)]
-        for i in range(N):
-            dispersion_i = 0
-            for j in range(m):
-                dispersion_i += (matrix_y[i][j] - average_y[i]) ** 2
-            dispersion_y.append(dispersion_i / (m - 1))
-        f1 = m - 1
-        f2 = N
-        f3 = f1 * f2
-        q = 1 - p
-        Gp = max(dispersion_y) / sum(dispersion_y)
-        print("Тест Кохрена:")
-        Gt = Exp.getСohranValue(f2, f1, q)
-        if Gt > Gp:
-            print("Дисперсія однорідна при {:.2f}.".format(q))
-            homogeneous = True
+F3 = (m - 1) * n
+coefs1 = []
+coefs2 = []
+d = 11
+res = [0] * 11
+for j in range(11):
+    t_pract = 0
+    for i in range(15):
+        if j == 0:
+            t_pract += Y_average[i] / 15
         else:
-            print("Дисперсія неоднорідна при {:.2f}! Спробуйте збільшити m.".format(q))
-            m += 1
-
-    dispersion_b2 = sum(dispersion_y) / (N * N * m)
-    student_lst = list(student_test(beta))
-    print("Рівняння регресії з тестом студента")
-    print("{:.3f} + {:.3f} * X1 + {:.3f} * X2 + {:.3f} * X3 + {:.3f} * Х1X2 + {:.3f} * Х1X3 + {:.3f} * Х2X3"
-          "+ {:.3f} * Х1Х2X3 + {:.3f} * X11^2 + {:.3f} * X22^2 + {:.3f} * X33^2 = ŷ\n\tПеревірка"
-          .format(student_lst[0], student_lst[1], student_lst[2], student_lst[3], student_lst[4], student_lst[5],
-                  student_lst[6], student_lst[7], student_lst[8], student_lst[9], student_lst[10]))
-    for i in range(N):
-        print("ŷ{} = {:.3f} ≈ {:.3f}".format((i + 1), check_result(student_lst, i), average_y[i]))
-
-    print("Тест Фішера")
-    d = 11 - student_lst.count(0)
-    if fisher_test():
-        print("Рівняння регресії адекватне оригіналу")
-        adequate = True
+            t_pract += Y_average[i] * xn[i][j - 1]
+        res[j] = beta[j]
+    if fabs(t_pract / sbs) < t.ppf(q=0.975, df=F3):
+        coefs2.append(beta[j])
+        res[j] = 0
+        d-=1
     else:
-        print("Рівняння регресії неадекватне оригіналу\n\t Повторюємо експеримент")
+        coefs1.append(beta[j])
+print("Значущі коефіцієнти регресії:", [round(i, 3) for i in coefs1])
+print("Незначущі коефіцієнти регресії:", [round(i, 3) for i in coefs2])
+y_st = []
+for i in range(15):
+    y_st.append(res[0] + res[1] * x1[i] + res[2] * x2[i] + res[3] * x3[i] + res[4] * x1x2[i] + res[5] *
+                x1x3[i] + res[6] * x2x3[i] + res[7] * x1x2x3[i] + res[8] * x1kv[i] + res[9] *
+                x2kv[i] + res[10] * x3kv[i])
+print("Значення з отриманими коефіцієнтами:")
+for i in range(15):
+    print("{:.3f}".format(y_st[i]), end=" ")
+
+print("\n------------------------- Перевірка адекватності за критерієм Фішера -------------------------")
+Sad = m * sum([(y_st[i] - Y_average[i]) ** 2 for i in range(15)]) / (n - d)
+Fp = Sad / sb
+F4 = n - d
+print("Fp =", Fp)
+if Fp < f.ppf(q=0.95, dfn=F4, dfd=F3):
+    print("Рівняння регресії адекватне при рівні значимості 0.05")
+
+else:
+    print("Рівняння регресії неадекватне при рівні значимості 0.05")
